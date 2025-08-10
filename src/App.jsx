@@ -8,21 +8,20 @@ function ConfettiOverlay({ pieces = 240, onDone }) {
   if (itemsRef.current.length === 0) {
     const colors = ["#60a5fa", "#34d399", "#f472b6", "#f59e0b", "#a78bfa", "#ef4444", "#22d3ee"];
     itemsRef.current = Array.from({ length: pieces }).map((_, i) => {
-      const left = Math.random() * 100;        // vw
-      const size = 5 + Math.random() * 7;      // px
+      const left = Math.random() * 100;
+      const size = 5 + Math.random() * 7;
       const rotate = Math.random() * 360;
-      const fall = 2600 + Math.random() * 2200; // 2.6s–4.8s fall
-      const delay = Math.random() * 220;       // ms
-      const drift = (Math.random() - 0.5) * 260; // px
+      const fall = 2600 + Math.random() * 2200;   // 2.6s–4.8s
+      const delay = Math.random() * 220;
+      const drift = (Math.random() - 0.5) * 240;
       const color = colors[i % colors.length];
       return { left, size, rotate, fall, delay, drift, color, id: i };
     });
   }
 
   useEffect(() => {
-    // Wait for the *longest* piece to finish, then call onDone
     const maxLife =
-      itemsRef.current.reduce((m, p) => Math.max(m, p.fall + p.delay), 0) + 150; // small buffer
+      itemsRef.current.reduce((m, p) => Math.max(m, p.fall + p.delay), 0) + 150;
     const t = setTimeout(() => onDone?.(), maxLife);
     return () => clearTimeout(t);
   }, [onDone]);
@@ -60,96 +59,75 @@ function ConfettiOverlay({ pieces = 240, onDone }) {
   );
 }
 
-/* --------------- Icy button overlay (with melt) --------------- */
+/* --------------- Clean icy slab overlay (no weird artifacts) --------------- */
 function IceOverlay({ melting }) {
   return (
     <>
       <style>{`
-        @keyframes iceShimmer { 
-          0% { transform: translateX(-25%); opacity:.9; } 
-          100% { transform: translateX(125%); opacity:.9; }
-        }
         @keyframes iceMelt {
-          0% { opacity:.95; transform: scaleY(1); }
-          100% { opacity:0; transform: scaleY(.94); }
-        }
-        @keyframes dripShrink {
-          0% { transform: scaleY(1); opacity:1; }
-          100% { transform: scaleY(.1); opacity:0; }
+          0%   { opacity:.96; filter: blur(0.6px); }
+          100% { opacity:0;   filter: blur(0px); }
         }
       `}</style>
-
       <div className="absolute inset-0 pointer-events-none overflow-visible">
-        {/* Frosty slab background */}
+        {/* Frosted glass slab */}
         <div
           className="absolute inset-0 rounded-xl"
           style={{
             background:
-              "linear-gradient(180deg, rgba(190,236,255,.85), rgba(100,195,255,.8) 55%, rgba(60,170,240,.72))",
-            border: "1px solid rgba(255,255,255,.45)",
+              "linear-gradient(180deg, rgba(190,236,255,.88), rgba(120,205,255,.84) 55%, rgba(70,175,240,.78))",
+            border: "1px solid rgba(255,255,255,.5)",
             boxShadow:
-              "inset 0 0 20px rgba(255,255,255,.55), inset 0 -8px 16px rgba(0,0,0,.18), 0 6px 14px rgba(0,0,0,.25)",
-            backdropFilter: "blur(1.4px)",
-            WebkitBackdropFilter: "blur(1.4px)",
-            animation: melting ? "iceMelt 2.3s ease-out forwards" : "none",
+              "inset 0 0 18px rgba(255,255,255,.5), inset 0 -6px 12px rgba(0,0,0,.18), 0 6px 14px rgba(0,0,0,.25)",
+            backdropFilter: "blur(1.2px)",
+            WebkitBackdropFilter: "blur(1.2px)",
+            animation: melting ? "iceMelt 2.2s ease-out forwards" : "none",
           }}
         />
-        {/* Snow cap */}
+        {/* Soft snow cap */}
         <div
           className="absolute -top-2 left-2 right-2 h-3 rounded-full"
           style={{
             background:
-              "linear-gradient(180deg, rgba(255,255,255,1), rgba(255,255,255,.85))",
-            filter: "drop-shadow(0 2px 3px rgba(0,0,0,.25))",
+              "linear-gradient(180deg, rgba(255,255,255,1), rgba(255,255,255,.9))",
+            filter: "drop-shadow(0 2px 3px rgba(0,0,0,.22))",
             opacity: 0.95,
             borderRadius: "12px/8px",
-            animation: melting ? "iceMelt 2.3s ease-out forwards" : "none",
+            animation: melting ? "iceMelt 2.2s ease-out forwards" : "none",
           }}
         />
-        {/* Icicles */}
-        {Array.from({ length: 8 }).map((_, i) => {
-          const left = 6 + i * 10 + Math.random() * 6;
-          const h = 8 + Math.random() * 12;
+        {/* Small triangle icicles (subtle, not bars) */}
+        {Array.from({ length: 7 }).map((_, i) => {
+          const left = 10 + i * 11 + Math.random() * 4;
+          const h = 8 + Math.random() * 10;
           return (
             <div
               key={i}
-              className="absolute bottom-0 w-2 rounded-b-sm"
+              className="absolute bottom-0"
               style={{
                 left: `${left}%`,
-                height: `${h}px`,
-                background:
-                  "linear-gradient(180deg, rgba(210,240,255,.9), rgba(150,210,255,.85))",
+                width: 0,
+                height: 0,
+                borderLeft: "6px solid transparent",
+                borderRight: "6px solid transparent",
+                borderTop: `${h}px solid rgba(200,230,255,.9)`,
                 filter: "drop-shadow(0 2px 2px rgba(0,0,0,.25))",
-                transformOrigin: "top center",
-                animation: melting ? "dripShrink 2.0s ease-out forwards" : "none",
+                animation: melting ? "iceMelt 2.2s ease-out forwards" : "none",
               }}
             />
           );
         })}
-        {/* Shimmer pass while frozen */}
-        {!melting && (
-          <div
-            className="absolute top-0 bottom-0 -left-1/3 w-1/3"
-            style={{
-              background:
-                "linear-gradient(90deg, transparent, rgba(255,255,255,.4), transparent)",
-              filter: "blur(2.2px)",
-              animation: "iceShimmer 2.1s linear infinite",
-            }}
-          />
-        )}
-        {/* Crack lines (subtle) */}
-        <svg
-          className="absolute inset-0"
-          viewBox="0 0 100 40"
-          preserveAspectRatio="none"
-          style={{ opacity: 0.35, mixBlendMode: "overlay" }}
-        >
-          <path d="M10,25 L25,20 L40,26 L55,19 L70,23 L85,18" stroke="white" strokeWidth="1" fill="none" />
-          <path d="M20,30 L28,22" stroke="white" strokeWidth="0.8" />
-          <path d="M48,28 L52,20" stroke="white" strokeWidth="0.8" />
-          <path d="M72,27 L76,21" stroke="white" strokeWidth="0.8" />
-        </svg>
+        {/* Very light frost texture (no animation) */}
+        <div
+          className="absolute inset-0 rounded-xl"
+          style={{
+            background:
+              "radial-gradient(circle at 20% 30%, rgba(255,255,255,.18), transparent 40%), radial-gradient(circle at 80% 20%, rgba(255,255,255,.12), transparent 45%), radial-gradient(circle at 60% 70%, rgba(255,255,255,.12), transparent 42%)",
+            mixBlendMode: "overlay",
+            borderRadius: "inherit",
+            animation: melting ? "iceMelt 2.2s ease-out forwards" : "none",
+          }}
+        />
       </div>
     </>
   );
@@ -162,17 +140,16 @@ export default function App() {
 
   const [frozen, setFrozen] = useState(false);
   const [melting, setMelting] = useState(false);
-  const [confettiKey, setConfettiKey] = useState(0); // remount confetti each time
+  const [confettiKey, setConfettiKey] = useState(0);
 
   const drawOnce = useCallback(() => (Math.random() < 0.9 ? 69 : 67), []);
 
   const handleConfettiDone = useCallback(() => {
-    // start melt, then unfreeze
     setMelting(true);
     setTimeout(() => {
       setMelting(false);
       setFrozen(false);
-    }, 2300); // melt duration
+    }, 2200); // melt duration
   }, []);
 
   const generate = async () => {
@@ -184,9 +161,8 @@ export default function App() {
     setIsRolling(false);
 
     if (result === 67) {
-      // Freeze and fire confetti. We *do not* unmount confetti until it finishes.
       setFrozen(true);
-      setConfettiKey((k) => k + 1); // ensure fresh timings each time
+      setConfettiKey((k) => k + 1);
     }
   };
 
@@ -197,9 +173,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen w-full bg-black text-zinc-50 flex items-center justify-center p-6">
-      {/* Confetti mounts only when frozen starts; it calls onDone when ALL pieces finish */}
       {frozen && !melting && (
-        <ConfettiOverlay key={confettiKey} pieces={240} onDone={handleConfettiDone} />
+        <ConfettiOverlay key={confettiKey} pieces={260} onDone={handleConfettiDone} />
       )}
 
       <div className="max-w-md w-full">
@@ -234,8 +209,8 @@ export default function App() {
                 ${frozen || melting ? "bg-red-600" : "bg-red-500"}
               `}
             >
-              {/* Make frozen label darker and crisper */}
-              <span className={`${frozen || melting ? "text-neutral-900 drop-shadow-[0_1px_0_rgba(255,255,255,.45)]" : ""} relative z-10`}>
+              {/* Darker, crisper frozen label */}
+              <span className={`${frozen || melting ? "text-neutral-900 drop-shadow-[0_1px_0_rgba(255,255,255,.55)]" : ""} relative z-10`}>
                 {buttonText}
               </span>
 
