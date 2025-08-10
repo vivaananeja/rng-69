@@ -1,17 +1,16 @@
 import { useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Tiny confetti generator (no extra packages)
-function ConfettiOverlay({ duration = 3000, pieces = 140 }) {
-  const colors = ["#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#a855f7", "#ec4899", "#f43f5e"];
-  // Build random piece styles once per mount
+/** Confetti that falls straight through (no piling). */
+function ConfettiOverlay({ duration = 3500, pieces = 200 }) {
+  const colors = ["#60a5fa", "#34d399", "#f472b6", "#f59e0b", "#a78bfa", "#ef4444", "#22d3ee"];
   const items = Array.from({ length: pieces }).map((_, i) => {
     const left = Math.random() * 100; // vw
-    const size = 6 + Math.random() * 6; // px
+    const size = 5 + Math.random() * 7; // px
     const rotate = Math.random() * 360;
-    const fall = 1800 + Math.random() * 1800; // ms
-    const delay = Math.random() * 200; // ms
-    const drift = (Math.random() - 0.5) * 200; // px horizontal drift
+    const fall = duration * (0.7 + Math.random() * 0.6); // ms
+    const delay = Math.random() * 180; // ms
+    const drift = (Math.random() - 0.5) * 220; // px
     const color = colors[i % colors.length];
     return { left, size, rotate, fall, delay, drift, color, id: i };
   });
@@ -20,15 +19,11 @@ function ConfettiOverlay({ duration = 3000, pieces = 140 }) {
     <>
       <style>{`
         @keyframes confetti-fall {
-          0%   { transform: translate3d(0,-100vh,0) rotate(var(--r)); opacity: 1; }
-          100% { transform: translate3d(var(--d), 100vh,0) rotate(calc(var(--r) + 540deg)); opacity: 1; }
+          0%   { transform: translate3d(0,-110vh,0) rotate(var(--r)); }
+          100% { transform: translate3d(var(--d), 110vh,0) rotate(calc(var(--r) + 540deg)); }
         }
       `}</style>
-      <div
-        className="pointer-events-none fixed inset-0 z-50"
-        aria-hidden="true"
-        style={{ animation: `fadeOut ${duration}ms linear forwards` }}
-      >
+      <div className="pointer-events-none fixed inset-0 z-50" aria-hidden="true">
         {items.map((p) => (
           <span
             key={p.id}
@@ -41,11 +36,10 @@ function ConfettiOverlay({ duration = 3000, pieces = 140 }) {
               background: p.color,
               transform: `rotate(${p.rotate}deg)`,
               animation: `confetti-fall ${p.fall}ms linear ${p.delay}ms forwards`,
-              // custom props for the keyframes
               ["--r"]: `${p.rotate}deg`,
               ["--d"]: `${p.drift}px`,
               borderRadius: "2px",
-              boxShadow: "0 0 0.5px rgba(0,0,0,.2)",
+              boxShadow: "0 0 0.5px rgba(0,0,0,.25)",
             }}
           />
         ))}
@@ -54,15 +48,70 @@ function ConfettiOverlay({ duration = 3000, pieces = 140 }) {
   );
 }
 
+/** Frosted overlay for the button (freezes & then melts). */
+function IceOverlay({ melting }) {
+  return (
+    <>
+      <style>{`
+        @keyframes ice-shimmer {
+          0% { transform: translateX(-20%); opacity:.9; }
+          100% { transform: translateX(120%); opacity:.9; }
+        }
+        @keyframes ice-melt {
+          0% { opacity: .9; filter: blur(1px); }
+          100% { opacity: 0; filter: blur(0px); }
+        }
+      `}</style>
+      <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
+        {/* frosty base */}
+        <div
+          className={`absolute inset-0 ${
+            melting ? "" : "opacity-90"
+          }`}
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(173,216,230,.55), rgba(135,206,235,.45) 60%, rgba(173,216,230,.35))",
+            border: "1px solid rgba(255,255,255,.25)",
+            backdropFilter: "blur(1.5px)",
+            WebkitBackdropFilter: "blur(1.5px)",
+            animation: melting ? "ice-melt 2.2s ease-out forwards" : "none",
+          }}
+        />
+        {/* shimmer streak */}
+        {!melting && (
+          <div
+            className="absolute top-0 bottom-0 -left-1/3 w-1/3"
+            style={{
+              background:
+                "linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent)",
+              filter: "blur(2px)",
+              animation: "ice-shimmer 1.8s linear infinite",
+            }}
+          />
+        )}
+      </div>
+    </>
+  );
+}
+
 export default function App() {
   const [isRolling, setIsRolling] = useState(false);
   const [current, setCurrent] = useState(null);
+
+  // freeze/melt states for the button
+  const [frozen, setFrozen] = useState(false);
+  const [melting, setMelting] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
 
-  // 90% chance 69, 10% chance 67
+  // timings
+  const CONFETTI_DURATION = 3500; // confetti fly-through
+  const MELT_DURATION = 2200;     // ice melt at the end
+
+  // 90% → 69, 10% → 67
   const drawOnce = useCallback(() => (Math.random() < 0.9 ? 69 : 67), []);
 
   const generate = async () => {
+    if (frozen || melting) return; // still frozen
     setIsRolling(true);
     await new Promise((r) => setTimeout(r, 650));
     const result = drawOnce();
@@ -70,13 +119,28 @@ export default function App() {
     setIsRolling(false);
 
     if (result === 67) {
+      // start celebration & freeze button
       setShowConfetti(true);
-      // hide confetti after 3s
-      setTimeout(() => setShowConfetti(false), 3000);
+      setFrozen(true);
+
+      // stop confetti after duration
+      setTimeout(() => setShowConfetti(false), CONFETTI_DURATION);
+
+      // start melting once confetti is done
+      setTimeout(() => {
+        setMelting(true);
+        // unfreeze after melt
+        setTimeout(() => {
+          setMelting(false);
+          setFrozen(false);
+        }, MELT_DURATION);
+      }, CONFETTI_DURATION);
     }
   };
 
   const bigNumber = useMemo(() => (current !== null ? current : 69), [current]);
+  const buttonDisabled = isRolling || frozen || melting;
+  const buttonText = frozen || melting ? "67 vro" : isRolling ? "Rolling…" : "Generate";
 
   return (
     <div className="min-h-screen w-full bg-black text-zinc-50 flex items-center justify-center p-6">
@@ -104,13 +168,16 @@ export default function App() {
             </AnimatePresence>
           </div>
 
-          <div className="mt-4 flex justify-center">
+          <div className="mt-4 flex justify-center relative">
             <button
               onClick={generate}
-              disabled={isRolling}
-              className="px-6 py-2 rounded-xl bg-red-500 hover:bg-red-400 text-black font-semibold shadow-lg disabled:opacity-60 disabled:cursor-not-allowed transition"
+              disabled={buttonDisabled}
+              className={`relative px-6 py-2 rounded-xl bg-red-500 text-black font-semibold shadow-lg transition
+                ${buttonDisabled ? "opacity-80 cursor-not-allowed" : "hover:bg-red-400"}
+              `}
             >
-              {isRolling ? "Rolling…" : "Generate"}
+              {buttonText}
+              {(frozen || melting) && <IceOverlay melting={melting} />}
             </button>
           </div>
         </div>
